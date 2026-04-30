@@ -544,8 +544,7 @@ func start(ctx context.Context, opts StartOpts) error {
 		executor.WithDebouncer(debouncer),
 		executor.WithSingletonManager(sn),
 		executor.WithBatcher(batcher),
-		executor.WithAssignedQueueShard(queueShard),
-		executor.WithShardSelector(shardSelector),
+		executor.WithShardRegistry(shardRegistry),
 		executor.WithTraceReader(dbcqrs),
 		executor.WithRealtimeConfig(executor.ExecutorRealtimeConfig{
 			Secret:     consts.DevServerRealtimeJWTSecret,
@@ -582,7 +581,7 @@ func start(ctx context.Context, opts StartOpts) error {
 		executor.WithServiceDebouncer(debouncer),
 		executor.WithServiceCroner(croner),
 		executor.WithServiceLogger(l),
-		executor.WithServiceShardSelector(shardSelector),
+		executor.WithServiceShardRegistry(shardRegistry),
 		executor.WithServicePublisher(pb),
 		executor.WithServiceEnableKeyQueues(func(ctx context.Context, acctID uuid.UUID) bool {
 			return enableKeyQueues

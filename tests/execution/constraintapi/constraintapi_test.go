@@ -133,7 +133,7 @@ func TestConstraintEnforcement(t *testing.T) {
 			require.NoError(t, err)
 			exec, err := executor.NewExecutor(
 				executor.WithRateLimiter(rl),
-				executor.WithAssignedQueueShard(shard),
+				executor.WithShardRegistry(queue.NewSingleShardRegistry(shard)),
 				executor.WithQueue(q),
 				executor.WithStateManager(redis_state.MustRunServiceV2(sm)),
 				executor.WithPauseManager(pauseMgr),

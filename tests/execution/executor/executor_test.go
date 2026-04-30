@@ -162,9 +162,7 @@ func TestScheduleRaceCondition(t *testing.T) {
 	}
 	queueShard := redis_state.NewQueueShard(consts.DefaultQueueShardName, unshardedClient.Queue(), queueOpts...)
 
-	shardSelector := func(ctx context.Context, _ uuid.UUID, _ *string) (queue.QueueShard, error) {
-		return queueShard, nil
-	}
+	shardRegistry := queue.NewSingleShardRegistry(queueShard)
 
 	pauseMgr := pauses.NewPauseStoreManager(unshardedClient)
 
@@ -179,7 +177,7 @@ func TestScheduleRaceCondition(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queue.NewSingleShardRegistry(queueShard),
+		shardRegistry,
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -191,8 +189,7 @@ func TestScheduleRaceCondition(t *testing.T) {
 		executor.WithLogger(logger.StdlibLogger(ctx)),
 		executor.WithFunctionLoader(loader),
 		executor.WithLifecycleListeners(newFakeLifecycle(work)),
-		executor.WithAssignedQueueShard(queueShard),
-		executor.WithShardSelector(shardSelector),
+		executor.WithShardRegistry(shardRegistry),
 		executor.WithTraceReader(dbcqrs),
 		executor.WithTracerProvider(tracing.NewSqlcTracerProvider(adapter.Q())),
 	)
@@ -330,9 +327,7 @@ func TestScheduleRaceConditionWithExistingIdempotencyKey(t *testing.T) {
 	}
 	queueShard := redis_state.NewQueueShard(consts.DefaultQueueShardName, unshardedClient.Queue(), queueOpts...)
 
-	shardSelector := func(ctx context.Context, _ uuid.UUID, _ *string) (queue.QueueShard, error) {
-		return queueShard, nil
-	}
+	shardRegistry := queue.NewSingleShardRegistry(queueShard)
 
 	pauseMgr := pauses.NewPauseStoreManager(unshardedClient)
 
@@ -347,7 +342,7 @@ func TestScheduleRaceConditionWithExistingIdempotencyKey(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queue.NewSingleShardRegistry(queueShard),
+		shardRegistry,
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -359,8 +354,7 @@ func TestScheduleRaceConditionWithExistingIdempotencyKey(t *testing.T) {
 		executor.WithLogger(logger.StdlibLogger(ctx)),
 		executor.WithFunctionLoader(loader),
 		executor.WithLifecycleListeners(newFakeLifecycle(work)),
-		executor.WithAssignedQueueShard(queueShard),
-		executor.WithShardSelector(shardSelector),
+		executor.WithShardRegistry(shardRegistry),
 		executor.WithTraceReader(dbcqrs),
 	)
 	require.NoError(t, err)
@@ -531,9 +525,7 @@ func TestFinalize(t *testing.T) {
 	}
 
 	queueShard := redis_state.NewQueueShard(consts.DefaultQueueShardName, unshardedClient.Queue(), queueOpts...)
-	shardSelector := func(ctx context.Context, _ uuid.UUID, _ *string) (queue.QueueShard, error) {
-		return queueShard, nil
-	}
+	shardRegistry := queue.NewSingleShardRegistry(queueShard)
 
 	pauseMgr := pauses.NewPauseStoreManager(unshardedClient)
 
@@ -548,7 +540,7 @@ func TestFinalize(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queue.NewSingleShardRegistry(queueShard),
+		shardRegistry,
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -562,8 +554,7 @@ func TestFinalize(t *testing.T) {
 		executor.WithLogger(logger.StdlibLogger(ctx)),
 		executor.WithFunctionLoader(loader),
 		executor.WithLifecycleListeners(newFakeLifecycle(work)),
-		executor.WithAssignedQueueShard(queueShard),
-		executor.WithShardSelector(shardSelector),
+		executor.WithShardRegistry(shardRegistry),
 		executor.WithTraceReader(dbcqrs),
 	)
 	require.NoError(t, err)
@@ -812,9 +803,7 @@ func TestInvokeRetrySucceedsIfPauseAlreadyCreated(t *testing.T) {
 	}
 	queueShard := redis_state.NewQueueShard(consts.DefaultQueueShardName, unshardedClient.Queue(), queueOpts...)
 
-	shardSelector := func(ctx context.Context, _ uuid.UUID, _ *string) (queue.QueueShard, error) {
-		return queueShard, nil
-	}
+	shardRegistry := queue.NewSingleShardRegistry(queueShard)
 
 	pauseMgr := pauses.NewPauseStoreManager(unshardedClient)
 
@@ -829,7 +818,7 @@ func TestInvokeRetrySucceedsIfPauseAlreadyCreated(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queue.NewSingleShardRegistry(queueShard),
+		shardRegistry,
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -859,8 +848,7 @@ func TestInvokeRetrySucceedsIfPauseAlreadyCreated(t *testing.T) {
 		executor.WithQueue(rq),
 		executor.WithLogger(logger.StdlibLogger(ctx)),
 		executor.WithFunctionLoader(loader),
-		executor.WithAssignedQueueShard(queueShard),
-		executor.WithShardSelector(shardSelector),
+		executor.WithShardRegistry(shardRegistry),
 		executor.WithTracerProvider(tracing.NewOtelTracerProvider(nil, time.Millisecond)),
 		executor.WithInvokeEventHandler(func(ctx context.Context, evt event.TrackedEvent) error {
 			if evt.GetEvent().Name == "inngest/function.invoked" {
@@ -996,9 +984,7 @@ func TestExecutorReturnsResponseWhenNonRetriableError(t *testing.T) {
 	}
 	queueShard := redis_state.NewQueueShard(consts.DefaultQueueShardName, unshardedClient.Queue(), queueOpts...)
 
-	shardSelector := func(ctx context.Context, _ uuid.UUID, _ *string) (queue.QueueShard, error) {
-		return queueShard, nil
-	}
+	shardRegistry := queue.NewSingleShardRegistry(queueShard)
 
 	pauseMgr := pauses.NewPauseStoreManager(unshardedClient)
 
@@ -1013,7 +999,7 @@ func TestExecutorReturnsResponseWhenNonRetriableError(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queue.NewSingleShardRegistry(queueShard),
+		shardRegistry,
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -1037,8 +1023,7 @@ func TestExecutorReturnsResponseWhenNonRetriableError(t *testing.T) {
 		executor.WithQueue(rq),
 		executor.WithLogger(logger.StdlibLogger(ctx)),
 		executor.WithFunctionLoader(loader),
-		executor.WithAssignedQueueShard(queueShard),
-		executor.WithShardSelector(shardSelector),
+		executor.WithShardRegistry(shardRegistry),
 		executor.WithTracerProvider(tracing.NewOtelTracerProvider(nil, time.Millisecond)),
 		executor.WithDriverV1(nonRetriableDriver),
 	)
@@ -1183,9 +1168,7 @@ func TestCapacityErrorRetriesWhenAttemptsExhausted(t *testing.T) {
 	}
 	queueShard := redis_state.NewQueueShard(consts.DefaultQueueShardName, unshardedClient.Queue(), queueOpts...)
 
-	shardSelector := func(ctx context.Context, _ uuid.UUID, _ *string) (queue.QueueShard, error) {
-		return queueShard, nil
-	}
+	shardRegistry := queue.NewSingleShardRegistry(queueShard)
 
 	pauseMgr := pauses.NewPauseStoreManager(unshardedClient)
 
@@ -1200,7 +1183,7 @@ func TestCapacityErrorRetriesWhenAttemptsExhausted(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queue.NewSingleShardRegistry(queueShard),
+		shardRegistry,
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -1221,8 +1204,7 @@ func TestCapacityErrorRetriesWhenAttemptsExhausted(t *testing.T) {
 		executor.WithQueue(rq),
 		executor.WithLogger(logger.StdlibLogger(ctx)),
 		executor.WithFunctionLoader(loader),
-		executor.WithAssignedQueueShard(queueShard),
-		executor.WithShardSelector(shardSelector),
+		executor.WithShardRegistry(shardRegistry),
 		executor.WithTracerProvider(tracing.NewOtelTracerProvider(nil, time.Millisecond)),
 		executor.WithDriverV1(capacityDriver),
 	)
@@ -1369,9 +1351,7 @@ func TestExecutorScheduleRateLimit(t *testing.T) {
 	}
 	queueShard := redis_state.NewQueueShard(consts.DefaultQueueShardName, unshardedClient.Queue(), queueOpts...)
 
-	shardSelector := func(ctx context.Context, _ uuid.UUID, _ *string) (queue.QueueShard, error) {
-		return queueShard, nil
-	}
+	shardRegistry := queue.NewSingleShardRegistry(queueShard)
 
 	pauseMgr := pauses.NewPauseStoreManager(unshardedClient)
 
@@ -1386,7 +1366,7 @@ func TestExecutorScheduleRateLimit(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queue.NewSingleShardRegistry(queueShard),
+		shardRegistry,
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -1399,8 +1379,7 @@ func TestExecutorScheduleRateLimit(t *testing.T) {
 		executor.WithQueue(rq),
 		executor.WithLogger(logger.StdlibLogger(ctx)),
 		executor.WithFunctionLoader(loader),
-		executor.WithAssignedQueueShard(queueShard),
-		executor.WithShardSelector(shardSelector),
+		executor.WithShardRegistry(shardRegistry),
 		executor.WithTracerProvider(tracing.NewOtelTracerProvider(nil, time.Millisecond)),
 		executor.WithRateLimiter(rl),
 	)
@@ -1564,9 +1543,7 @@ func TestExecutorScheduleBacklogSizeLimit(t *testing.T) {
 	}
 	queueShard := redis_state.NewQueueShard(consts.DefaultQueueShardName, unshardedClient.Queue(), queueOpts...)
 
-	shardSelector := func(ctx context.Context, _ uuid.UUID, _ *string) (queue.QueueShard, error) {
-		return queueShard, nil
-	}
+	shardRegistry := queue.NewSingleShardRegistry(queueShard)
 
 	pauseMgr := pauses.NewPauseStoreManager(unshardedClient)
 
@@ -1581,7 +1558,7 @@ func TestExecutorScheduleBacklogSizeLimit(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queue.NewSingleShardRegistry(queueShard),
+		shardRegistry,
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -1594,8 +1571,7 @@ func TestExecutorScheduleBacklogSizeLimit(t *testing.T) {
 		executor.WithQueue(rq),
 		executor.WithLogger(logger.StdlibLogger(ctx)),
 		executor.WithFunctionLoader(loader),
-		executor.WithAssignedQueueShard(queueShard),
-		executor.WithShardSelector(shardSelector),
+		executor.WithShardRegistry(shardRegistry),
 		executor.WithTracerProvider(tracing.NewOtelTracerProvider(nil, time.Millisecond)),
 
 		executor.WithLifecycleListeners(fll),
@@ -1721,9 +1697,7 @@ func TestScheduleSkipsCancelOnPauseWhenExpressionFalse(t *testing.T) {
 	}
 	queueShard := redis_state.NewQueueShard(consts.DefaultQueueShardName, unshardedClient.Queue(), queueOpts...)
 
-	shardSelector := func(ctx context.Context, _ uuid.UUID, _ *string) (queue.QueueShard, error) {
-		return queueShard, nil
-	}
+	shardRegistry := queue.NewSingleShardRegistry(queueShard)
 
 	pauseMgr := pauses.NewPauseStoreManager(unshardedClient)
 
@@ -1738,7 +1712,7 @@ func TestScheduleSkipsCancelOnPauseWhenExpressionFalse(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queue.NewSingleShardRegistry(queueShard),
+		shardRegistry,
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -1750,8 +1724,7 @@ func TestScheduleSkipsCancelOnPauseWhenExpressionFalse(t *testing.T) {
 		executor.WithLogger(logger.StdlibLogger(ctx)),
 		executor.WithFunctionLoader(loader),
 		executor.WithLifecycleListeners(newFakeLifecycle(work)),
-		executor.WithAssignedQueueShard(queueShard),
-		executor.WithShardSelector(shardSelector),
+		executor.WithShardRegistry(shardRegistry),
 		executor.WithTraceReader(dbcqrs),
 		executor.WithTracerProvider(tracing.NewSqlcTracerProvider(adapter.Q())),
 	)
@@ -1840,9 +1813,7 @@ func TestScheduleCreatesCancelOnPauseWhenExpressionTrue(t *testing.T) {
 	}
 	queueShard := redis_state.NewQueueShard(consts.DefaultQueueShardName, unshardedClient.Queue(), queueOpts...)
 
-	shardSelector := func(ctx context.Context, _ uuid.UUID, _ *string) (queue.QueueShard, error) {
-		return queueShard, nil
-	}
+	shardRegistry := queue.NewSingleShardRegistry(queueShard)
 
 	pauseMgr := pauses.NewPauseStoreManager(unshardedClient)
 
@@ -1857,7 +1828,7 @@ func TestScheduleCreatesCancelOnPauseWhenExpressionTrue(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queue.NewSingleShardRegistry(queueShard),
+		shardRegistry,
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -1869,8 +1840,7 @@ func TestScheduleCreatesCancelOnPauseWhenExpressionTrue(t *testing.T) {
 		executor.WithLogger(logger.StdlibLogger(ctx)),
 		executor.WithFunctionLoader(loader),
 		executor.WithLifecycleListeners(newFakeLifecycle(work)),
-		executor.WithAssignedQueueShard(queueShard),
-		executor.WithShardSelector(shardSelector),
+		executor.WithShardRegistry(shardRegistry),
 		executor.WithTraceReader(dbcqrs),
 		executor.WithTracerProvider(tracing.NewSqlcTracerProvider(adapter.Q())),
 	)
