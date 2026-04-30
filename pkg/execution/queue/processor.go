@@ -39,7 +39,7 @@ func LatencyAverage() float64 {
 func New(
 	ctx context.Context,
 	name string,
-	shards ShardRegistryController,
+	shards QueueShardRegistry,
 	options ...QueueOpt,
 ) (*queueProcessor, error) {
 	o := NewQueueOptions(options...)
@@ -98,10 +98,8 @@ type queueProcessor struct {
 	name string
 
 	// shards owns the {shards map, ShardSelector, primary} trio. Topology
-	// can be mutated at runtime via shards.SetPrimary, Add, Remove, or
-	// Replace; reads through the registry are safe under concurrent
-	// mutation.
-	shards ShardRegistryController
+	// can be mutated at runtime via shards.SetPrimary.
+	shards QueueShardRegistry
 
 	// quit is a channel that any method can send on to trigger termination
 	// of the Run loop.  This typically accepts an error, but a nil error

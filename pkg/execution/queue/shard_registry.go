@@ -40,16 +40,24 @@ type ShardRegistry interface {
 	ForEach(ctx context.Context, fn func(context.Context, QueueShard) error) error
 }
 
-// ShardRegistryController is the mutate surface, held by the lease loop and
-// bootstrap wiring. Components outside the queue control plane should depend
-// only on ShardRegistry.
-type ShardRegistryController interface {
+// QueueShardRegistry is the surface the queue processor itself depends on:
+// the read-only ShardRegistry plus SetPrimary, which the shard-lease loop
+// calls when it claims a lease. Components that don't run the lease loop
+// should depend on ShardRegistry instead.
+type QueueShardRegistry interface {
 	ShardRegistry
 
 	// SetPrimary updates the leased primary shard. Pass nil to clear the
 	// primary. A non-nil shard is also added to the active set if not
 	// already present.
 	SetPrimary(ctx context.Context, shard QueueShard)
+}
+
+// ShardRegistryController is the full mutate surface, held by bootstrap
+// wiring that owns topology changes. Components outside the queue control
+// plane should depend on ShardRegistry (or QueueShardRegistry) instead.
+type ShardRegistryController interface {
+	QueueShardRegistry
 
 	// Replace atomically swaps the shard set and selector. The current
 	// primary is preserved across replacement (re-inserted into the new
