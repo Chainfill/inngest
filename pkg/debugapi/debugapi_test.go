@@ -68,13 +68,7 @@ func setupBatchManager(t *testing.T, rc rueidis.Client) batch.BatchManager {
 	q, err := queue.New(
 		context.Background(),
 		"batch-test",
-		shard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: shard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return shard, nil
-		},
+		queue.NewSingleShardRegistry(shard),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -97,13 +91,7 @@ func setupDebouncer(t *testing.T, rc rueidis.Client) debounce.Debouncer {
 	q, err := queue.New(
 		context.Background(),
 		"debounce-test",
-		shard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: shard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return shard, nil
-		},
+		queue.NewSingleShardRegistry(shard),
 		opts...,
 	)
 	require.NoError(t, err)

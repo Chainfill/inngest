@@ -39,18 +39,14 @@ func LatencyAverage() float64 {
 func New(
 	ctx context.Context,
 	name string,
-	primaryQueueShard QueueShard,
-	queueShardClients map[string]QueueShard,
-	shardSelector ShardSelector,
+	shards ShardRegistryController,
 	options ...QueueOpt,
 ) (*queueProcessor, error) {
 	o := NewQueueOptions(options...)
 
-	var registryOpts []ShardRegistryOpt
-	if primaryQueueShard != nil {
-		registryOpts = append(registryOpts, WithPrimary(primaryQueueShard))
+	if shards == nil {
+		return nil, fmt.Errorf("shard registry must not be nil")
 	}
-	shards := NewShardRegistry(queueShardClients, shardSelector, registryOpts...)
 
 	qp := &queueProcessor{
 		name: name,
@@ -83,11 +79,11 @@ func New(
 		shadowContinueCooldown: map[string]time.Time{},
 	}
 
-	if primaryQueueShard == nil {
+	if shards.Primary() == nil {
 		if o.runMode.ShardGroup == "" {
 			return nil, fmt.Errorf("must pass either primary queue shard or a valid ShardGroup in runMode")
 		}
-		if len(qp.shards.ByGroup(o.runMode.ShardGroup)) == 0 {
+		if len(shards.ByGroup(o.runMode.ShardGroup)) == 0 {
 			return nil, fmt.Errorf("No shards found for configured shard group: %s", o.runMode.ShardGroup)
 		}
 	}

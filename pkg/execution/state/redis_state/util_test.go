@@ -57,9 +57,11 @@ func newQueue(t testing.TB, rc rueidis.Client, opts ...osqueue.QueueOpt) (queueI
 	queue, err := osqueue.New(
 		ctx,
 		"test-queue",
-		shard,
-		mapFromShards(shard),
-		alwaysSelectShard(shard),
+		osqueue.NewShardRegistry(
+			mapFromShards(shard),
+			alwaysSelectShard(shard),
+			osqueue.WithPrimary(shard),
+		),
 		opts...)
 	require.NoError(t, err)
 

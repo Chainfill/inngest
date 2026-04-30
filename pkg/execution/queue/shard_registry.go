@@ -82,6 +82,20 @@ func WithPrimary(shard QueueShard) ShardRegistryOpt {
 	}
 }
 
+// NewSingleShardRegistry is a convenience constructor for the common
+// single-shard case (devserver, tests). It seeds the topology with the
+// shard, configures a selector that always returns it, and sets it as
+// the primary.
+func NewSingleShardRegistry(shard QueueShard) *shardRegistry {
+	return NewShardRegistry(
+		map[string]QueueShard{shard.Name(): shard},
+		func(ctx context.Context, _ uuid.UUID, _ *string) (QueueShard, error) {
+			return shard, nil
+		},
+		WithPrimary(shard),
+	)
+}
+
 // NewShardRegistry constructs a registry with the given topology and
 // selector. shards may be nil (an empty topology is allowed); selector
 // may also be nil, in which case Resolve falls back to the primary

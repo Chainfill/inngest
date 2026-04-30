@@ -179,13 +179,7 @@ func TestScheduleRaceCondition(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queueShard,
-		map[string]queue.QueueShard{
-			queueShard.Name(): queueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return queueShard, nil
-		},
+		queue.NewSingleShardRegistry(queueShard),
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -353,13 +347,7 @@ func TestScheduleRaceConditionWithExistingIdempotencyKey(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queueShard,
-		map[string]queue.QueueShard{
-			queueShard.Name(): queueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return queueShard, nil
-		},
+		queue.NewSingleShardRegistry(queueShard),
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -560,13 +548,7 @@ func TestFinalize(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queueShard,
-		map[string]queue.QueueShard{
-			queueShard.Name(): queueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return queueShard, nil
-		},
+		queue.NewSingleShardRegistry(queueShard),
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -847,13 +829,7 @@ func TestInvokeRetrySucceedsIfPauseAlreadyCreated(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queueShard,
-		map[string]queue.QueueShard{
-			queueShard.Name(): queueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return queueShard, nil
-		},
+		queue.NewSingleShardRegistry(queueShard),
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -1037,13 +1013,7 @@ func TestExecutorReturnsResponseWhenNonRetriableError(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queueShard,
-		map[string]queue.QueueShard{
-			queueShard.Name(): queueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return queueShard, nil
-		},
+		queue.NewSingleShardRegistry(queueShard),
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -1230,13 +1200,7 @@ func TestCapacityErrorRetriesWhenAttemptsExhausted(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queueShard,
-		map[string]queue.QueueShard{
-			queueShard.Name(): queueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return queueShard, nil
-		},
+		queue.NewSingleShardRegistry(queueShard),
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -1422,13 +1386,7 @@ func TestExecutorScheduleRateLimit(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queueShard,
-		map[string]queue.QueueShard{
-			queueShard.Name(): queueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return queueShard, nil
-		},
+		queue.NewSingleShardRegistry(queueShard),
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -1623,13 +1581,7 @@ func TestExecutorScheduleBacklogSizeLimit(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queueShard,
-		map[string]queue.QueueShard{
-			queueShard.Name(): queueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return queueShard, nil
-		},
+		queue.NewSingleShardRegistry(queueShard),
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -1786,13 +1738,7 @@ func TestScheduleSkipsCancelOnPauseWhenExpressionFalse(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queueShard,
-		map[string]queue.QueueShard{
-			queueShard.Name(): queueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return queueShard, nil
-		},
+		queue.NewSingleShardRegistry(queueShard),
 		queueOpts...,
 	)
 	require.NoError(t, err)
@@ -1911,13 +1857,7 @@ func TestScheduleCreatesCancelOnPauseWhenExpressionTrue(t *testing.T) {
 	rq, err := queue.New(
 		context.Background(),
 		"test-queue",
-		queueShard,
-		map[string]queue.QueueShard{
-			queueShard.Name(): queueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return queueShard, nil
-		},
+		queue.NewSingleShardRegistry(queueShard),
 		queueOpts...,
 	)
 	require.NoError(t, err)

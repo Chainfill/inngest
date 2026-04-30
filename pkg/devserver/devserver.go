@@ -397,20 +397,16 @@ func start(ctx context.Context, opts StartOpts) error {
 	}
 
 	queueShard := redis_state.NewQueueShard(consts.DefaultQueueShardName, unshardedClient.Queue(), queueOpts...)
+	shardRegistry := queue.NewSingleShardRegistry(queueShard)
+
+	// shardSelector is kept here while singleton, executor, scheduler, apiv1,
+	// testapi, and debugapi are still migrated to take ShardRegistry directly.
+	// Removed in a follow-up chunk.
 	shardSelector := func(ctx context.Context, _ uuid.UUID, _ *string) (queue.QueueShard, error) {
 		return queueShard, nil
 	}
 
-	rq, err := queue.New(
-		ctx,
-		"queue",
-		queueShard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: queueShard,
-		},
-		shardSelector,
-		queueOpts...,
-	)
+	rq, err := queue.New(ctx, "queue", shardRegistry, queueOpts...)
 	if err != nil {
 		return fmt.Errorf("could not create queue: %w", err)
 	}

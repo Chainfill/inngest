@@ -50,13 +50,7 @@ func TestDeleteManager(t *testing.T) {
 	queueManager, err := queue.New(
 		context.Background(),
 		"delete-test",
-		shard,
-		map[string]queue.QueueShard{
-			shard.Name(): shard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return shard, nil
-		},
+		queue.NewSingleShardRegistry(shard),
 		opts...,
 	)
 	require.NoError(t, err)

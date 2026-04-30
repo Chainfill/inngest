@@ -107,13 +107,7 @@ func TestConstraintEnforcement(t *testing.T) {
 			q, err := queue.New(
 				ctx,
 				"test-queue",
-				shard,
-				map[string]queue.QueueShard{
-					shard.Name(): shard,
-				},
-				func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-					return shard, nil
-				},
+				queue.NewSingleShardRegistry(shard),
 				queueOpts...,
 			)
 			require.NoError(t, err)

@@ -46,14 +46,7 @@ func TestDebounce(t *testing.T) {
 	q, err := queue.New(
 		context.Background(),
 		"debounce-test",
-
-		shard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: shard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return shard, nil
-		},
+		queue.NewSingleShardRegistry(shard),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -321,13 +314,7 @@ func TestJITDebounceMigration(t *testing.T) {
 	oldQueue, err := queue.New(
 		context.Background(),
 		"old-queue",
-		defaultQueueShard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: defaultQueueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return defaultQueueShard, nil
-		},
+		queue.NewSingleShardRegistry(defaultQueueShard),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -335,19 +322,21 @@ func TestJITDebounceMigration(t *testing.T) {
 	newQueue, err := queue.New(
 		context.Background(),
 		"new-queue",
-		newSystemShard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: defaultQueueShard,
-			newSystemShard.Name():        newSystemShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			// Enqueue new system queue items to new system queue shard
-			if queueName != nil {
-				return newSystemShard, nil
-			}
+		queue.NewShardRegistry(
+			map[string]queue.QueueShard{
+				consts.DefaultQueueShardName: defaultQueueShard,
+				newSystemShard.Name():        newSystemShard,
+			},
+			func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
+				// Enqueue new system queue items to new system queue shard
+				if queueName != nil {
+					return newSystemShard, nil
+				}
 
-			return defaultQueueShard, nil
-		},
+				return defaultQueueShard, nil
+			},
+			queue.WithPrimary(newSystemShard),
+		),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -603,13 +592,7 @@ func TestDebounceMigrationWithoutTimeout(t *testing.T) {
 	oldQueue, err := queue.New(
 		context.Background(),
 		"old-queue",
-		defaultQueueShard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: defaultQueueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return defaultQueueShard, nil
-		},
+		queue.NewSingleShardRegistry(defaultQueueShard),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -617,19 +600,21 @@ func TestDebounceMigrationWithoutTimeout(t *testing.T) {
 	newQueue, err := queue.New(
 		context.Background(),
 		"new-queue",
-		newSystemShard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: defaultQueueShard,
-			newSystemShard.Name():        newSystemShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			// Enqueue new system queue items to new system queue shard
-			if queueName != nil {
-				return newSystemShard, nil
-			}
+		queue.NewShardRegistry(
+			map[string]queue.QueueShard{
+				consts.DefaultQueueShardName: defaultQueueShard,
+				newSystemShard.Name():        newSystemShard,
+			},
+			func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
+				// Enqueue new system queue items to new system queue shard
+				if queueName != nil {
+					return newSystemShard, nil
+				}
 
-			return defaultQueueShard, nil
-		},
+				return defaultQueueShard, nil
+			},
+			queue.WithPrimary(newSystemShard),
+		),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -868,13 +853,7 @@ func TestDebounceTimeoutIsPreserved(t *testing.T) {
 	oldQueue, err := queue.New(
 		context.Background(),
 		"old-queue",
-		defaultQueueShard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: defaultQueueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return defaultQueueShard, nil
-		},
+		queue.NewSingleShardRegistry(defaultQueueShard),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -882,19 +861,21 @@ func TestDebounceTimeoutIsPreserved(t *testing.T) {
 	newQueue, err := queue.New(
 		context.Background(),
 		"new-queue",
-		newSystemShard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: defaultQueueShard,
-			newSystemShard.Name():        newSystemShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			// Enqueue new system queue items to new system queue shard
-			if queueName != nil {
-				return newSystemShard, nil
-			}
+		queue.NewShardRegistry(
+			map[string]queue.QueueShard{
+				consts.DefaultQueueShardName: defaultQueueShard,
+				newSystemShard.Name():        newSystemShard,
+			},
+			func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
+				// Enqueue new system queue items to new system queue shard
+				if queueName != nil {
+					return newSystemShard, nil
+				}
 
-			return defaultQueueShard, nil
-		},
+				return defaultQueueShard, nil
+			},
+			queue.WithPrimary(newSystemShard),
+		),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -1097,13 +1078,7 @@ func TestDebounceExplicitMigration(t *testing.T) {
 	oldQueue, err := queue.New(
 		context.Background(),
 		"old-queue",
-		defaultQueueShard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: defaultQueueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return defaultQueueShard, nil
-		},
+		queue.NewSingleShardRegistry(defaultQueueShard),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -1111,19 +1086,21 @@ func TestDebounceExplicitMigration(t *testing.T) {
 	newQueue, err := queue.New(
 		context.Background(),
 		"new-queue",
-		newSystemShard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: defaultQueueShard,
-			newSystemShard.Name():        newSystemShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			// Enqueue new system queue items to new system queue shard
-			if queueName != nil {
-				return newSystemShard, nil
-			}
+		queue.NewShardRegistry(
+			map[string]queue.QueueShard{
+				consts.DefaultQueueShardName: defaultQueueShard,
+				newSystemShard.Name():        newSystemShard,
+			},
+			func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
+				// Enqueue new system queue items to new system queue shard
+				if queueName != nil {
+					return newSystemShard, nil
+				}
 
-			return defaultQueueShard, nil
-		},
+				return defaultQueueShard, nil
+			},
+			queue.WithPrimary(newSystemShard),
+		),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -1295,13 +1272,7 @@ func TestDebouncePrimaryChooser(t *testing.T) {
 	oldQueue, err := queue.New(
 		context.Background(),
 		"old-queue",
-		defaultQueueShard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: defaultQueueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return defaultQueueShard, nil
-		},
+		queue.NewSingleShardRegistry(defaultQueueShard),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -1309,19 +1280,21 @@ func TestDebouncePrimaryChooser(t *testing.T) {
 	newQueue, err := queue.New(
 		context.Background(),
 		"new-queue",
-		newSystemShard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: defaultQueueShard,
-			newSystemShard.Name():        newSystemShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			// Enqueue new system queue items to new system queue shard
-			if queueName != nil {
-				return newSystemShard, nil
-			}
+		queue.NewShardRegistry(
+			map[string]queue.QueueShard{
+				consts.DefaultQueueShardName: defaultQueueShard,
+				newSystemShard.Name():        newSystemShard,
+			},
+			func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
+				// Enqueue new system queue items to new system queue shard
+				if queueName != nil {
+					return newSystemShard, nil
+				}
 
-			return defaultQueueShard, nil
-		},
+				return defaultQueueShard, nil
+			},
+			queue.WithPrimary(newSystemShard),
+		),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -1468,13 +1441,7 @@ func TestDebounceExecutionDuringMigrationWorks(t *testing.T) {
 	oldQueue, err := queue.New(
 		context.Background(),
 		"old-queue",
-		defaultQueueShard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: defaultQueueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return defaultQueueShard, nil
-		},
+		queue.NewSingleShardRegistry(defaultQueueShard),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -1482,19 +1449,21 @@ func TestDebounceExecutionDuringMigrationWorks(t *testing.T) {
 	newQueue, err := queue.New(
 		context.Background(),
 		"new-queue",
-		newSystemShard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: defaultQueueShard,
-			newSystemShard.Name():        newSystemShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			// Enqueue new system queue items to new system queue shard
-			if queueName != nil {
-				return newSystemShard, nil
-			}
+		queue.NewShardRegistry(
+			map[string]queue.QueueShard{
+				consts.DefaultQueueShardName: defaultQueueShard,
+				newSystemShard.Name():        newSystemShard,
+			},
+			func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
+				// Enqueue new system queue items to new system queue shard
+				if queueName != nil {
+					return newSystemShard, nil
+				}
 
-			return defaultQueueShard, nil
-		},
+				return defaultQueueShard, nil
+			},
+			queue.WithPrimary(newSystemShard),
+		),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -1689,13 +1658,7 @@ func TestDebounceExecutionShouldNotRaceMigration(t *testing.T) {
 	oldQueue, err := queue.New(
 		context.Background(),
 		"old-queue",
-		defaultQueueShard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: defaultQueueShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return defaultQueueShard, nil
-		},
+		queue.NewSingleShardRegistry(defaultQueueShard),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -1703,19 +1666,21 @@ func TestDebounceExecutionShouldNotRaceMigration(t *testing.T) {
 	newQueue, err := queue.New(
 		context.Background(),
 		"new-queue",
-		newSystemShard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: defaultQueueShard,
-			newSystemShard.Name():        newSystemShard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			// Enqueue new system queue items to new system queue shard
-			if queueName != nil {
-				return newSystemShard, nil
-			}
+		queue.NewShardRegistry(
+			map[string]queue.QueueShard{
+				consts.DefaultQueueShardName: defaultQueueShard,
+				newSystemShard.Name():        newSystemShard,
+			},
+			func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
+				// Enqueue new system queue items to new system queue shard
+				if queueName != nil {
+					return newSystemShard, nil
+				}
 
-			return defaultQueueShard, nil
-		},
+				return defaultQueueShard, nil
+			},
+			queue.WithPrimary(newSystemShard),
+		),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -1903,13 +1868,7 @@ func TestGetDebounceInfo(t *testing.T) {
 	q, err := queue.New(
 		context.Background(),
 		"debounce-test",
-		shard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: shard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return shard, nil
-		},
+		queue.NewSingleShardRegistry(shard),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -2102,13 +2061,7 @@ func TestDeleteDebounce(t *testing.T) {
 	q, err := queue.New(
 		context.Background(),
 		"debounce-test",
-		shard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: shard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return shard, nil
-		},
+		queue.NewSingleShardRegistry(shard),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -2202,13 +2155,7 @@ func TestRunDebounce(t *testing.T) {
 	q, err := queue.New(
 		context.Background(),
 		"debounce-test",
-		shard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: shard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return shard, nil
-		},
+		queue.NewSingleShardRegistry(shard),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -2303,13 +2250,7 @@ func TestDeleteDebounceByID(t *testing.T) {
 	q, err := queue.New(
 		context.Background(),
 		"debounce-test",
-		shard,
-		map[string]queue.QueueShard{
-			consts.DefaultQueueShardName: shard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return shard, nil
-		},
+		queue.NewSingleShardRegistry(shard),
 		opts...,
 	)
 	require.NoError(t, err)

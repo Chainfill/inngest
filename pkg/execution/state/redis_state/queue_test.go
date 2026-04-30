@@ -1732,11 +1732,13 @@ func TestQueueSetFunctionMigrate(t *testing.T) {
 		q, err := osqueue.New(
 			context.Background(),
 			"test-queue",
-			defaultShard,
-			shardMap,
-			func(ctx context.Context, accountId uuid.UUID, queueName *string) (osqueue.QueueShard, error) {
-				return defaultShard, nil
-			},
+			osqueue.NewShardRegistry(
+				shardMap,
+				func(ctx context.Context, accountId uuid.UUID, queueName *string) (osqueue.QueueShard, error) {
+					return defaultShard, nil
+				},
+				osqueue.WithPrimary(defaultShard),
+			),
 		)
 		require.NoError(t, err)
 
@@ -2144,11 +2146,13 @@ func TestMigrate(t *testing.T) {
 			q1, err := osqueue.New(
 				context.Background(),
 				"q1",
-				shard1,
-				shards,
-				func(ctx context.Context, accountId uuid.UUID, queueName *string) (osqueue.QueueShard, error) {
-					return shard1, nil
-				},
+				osqueue.NewShardRegistry(
+					shards,
+					func(ctx context.Context, accountId uuid.UUID, queueName *string) (osqueue.QueueShard, error) {
+						return shard1, nil
+					},
+					osqueue.WithPrimary(shard1),
+				),
 				opts...,
 			)
 			require.NoError(t, err)
@@ -2158,11 +2162,13 @@ func TestMigrate(t *testing.T) {
 			q2, err := osqueue.New(
 				context.Background(),
 				"q2",
-				shard2,
-				shards,
-				func(ctx context.Context, accountId uuid.UUID, queueName *string) (osqueue.QueueShard, error) {
-					return shard2, nil
-				},
+				osqueue.NewShardRegistry(
+					shards,
+					func(ctx context.Context, accountId uuid.UUID, queueName *string) (osqueue.QueueShard, error) {
+						return shard2, nil
+					},
+					osqueue.WithPrimary(shard2),
+				),
 				opts...,
 			)
 			require.NoError(t, err)

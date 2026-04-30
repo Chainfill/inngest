@@ -104,11 +104,13 @@ func TestQueuePartitionConcurrency(t *testing.T) {
 	q, err := osqueue.New(
 		ctx,
 		"test-queue",
-		shard1,
-		shards,
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (osqueue.QueueShard, error) {
-			return shard1, nil
-		},
+		osqueue.NewShardRegistry(
+			shards,
+			func(ctx context.Context, accountId uuid.UUID, queueName *string) (osqueue.QueueShard, error) {
+				return shard1, nil
+			},
+			osqueue.WithPrimary(shard1),
+		),
 		opts...,
 	)
 	require.NoError(t, err)

@@ -18,7 +18,7 @@ func TestNewQueueRequiresPrimaryShardOrShardGroup(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	_, err := queue.New(ctx, "test", nil, nil, nil)
+	_, err := queue.New(ctx, "test", queue.NewShardRegistry(nil, nil))
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "must pass either primary queue shard or a valid ShardGroup in runMode")
 }
@@ -38,7 +38,7 @@ func TestNewQueueCreationWithPrimaryShard(t *testing.T) {
 	queueClient := redis_state.NewQueueClient(rc, redis_state.QueueDefaultKey)
 	shard := redis_state.NewQueueShard("test-shard", queueClient)
 
-	q, err := queue.New(ctx, "test", shard, nil, nil)
+	q, err := queue.New(ctx, "test", queue.NewSingleShardRegistry(shard))
 	require.NoError(t, err)
 
 	// Verify primaryQueueShard is set
@@ -71,7 +71,7 @@ func TestNewQueueWithNoValidShardsInGroup(t *testing.T) {
 	}
 
 	// Runtime expects group "B", but no shards belong to that group
-	_, err = queue.New(ctx, "test", nil, queueShards, nil,
+	_, err = queue.New(ctx, "test", queue.NewShardRegistry(queueShards, nil),
 		queue.WithRunMode(queue.QueueRunMode{
 			ShardGroup: "B",
 		}),
@@ -121,7 +121,7 @@ func TestNewQueueWithShardAssignment(t *testing.T) {
 	var mu sync.Mutex
 	var acquiredShardName string
 
-	q, err := queue.New(ctx, "test", nil, queueShards, nil,
+	q, err := queue.New(ctx, "test", queue.NewShardRegistry(queueShards, nil),
 		queue.WithClock(clock),
 		queue.WithRunMode(queue.QueueRunMode{
 			ShardGroup: groupName,

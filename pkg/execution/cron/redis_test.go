@@ -293,13 +293,7 @@ func TestNextHealthCheckTime(t *testing.T) {
 	q, err := queue.New(
 		ctx,
 		"test-queue",
-		shard,
-		map[string]queue.QueueShard{
-			shard.Name(): shard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return shard, nil
-		},
+		queue.NewSingleShardRegistry(shard),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -541,13 +535,7 @@ func TestCronHealthCheckJobID(t *testing.T) {
 	q, err := queue.New(
 		ctx,
 		"test-queue",
-		shard,
-		map[string]queue.QueueShard{
-			shard.Name(): shard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return shard, nil
-		},
+		queue.NewSingleShardRegistry(shard),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -671,13 +659,7 @@ func TestRedisCronManager(t *testing.T) {
 	q, err := queue.New(
 		ctx,
 		"test-queue",
-		shard,
-		map[string]queue.QueueShard{
-			shard.Name(): shard,
-		},
-		func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-			return shard, nil
-		},
+		queue.NewSingleShardRegistry(shard),
 		opts...,
 	)
 	require.NoError(t, err)

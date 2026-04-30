@@ -1326,22 +1326,26 @@ func TestPartitionBacklogSize(t *testing.T) {
 			q1, err := osqueue.New(
 				ctx,
 				"q1",
-				shard1,
-				queueShards,
-				func(ctx context.Context, accountId uuid.UUID, queueName *string) (osqueue.QueueShard, error) {
-					return shard1, nil
-				},
+				osqueue.NewShardRegistry(
+					queueShards,
+					func(ctx context.Context, accountId uuid.UUID, queueName *string) (osqueue.QueueShard, error) {
+						return shard1, nil
+					},
+					osqueue.WithPrimary(shard1),
+				),
 				opts...,
 			)
 			require.NoError(t, err)
 			q2, err := osqueue.New(
 				ctx,
 				"q2",
-				shard2,
-				queueShards,
-				func(ctx context.Context, accountId uuid.UUID, queueName *string) (osqueue.QueueShard, error) {
-					return shard2, nil
-				},
+				osqueue.NewShardRegistry(
+					queueShards,
+					func(ctx context.Context, accountId uuid.UUID, queueName *string) (osqueue.QueueShard, error) {
+						return shard2, nil
+					},
+					osqueue.WithPrimary(shard2),
+				),
 				opts...,
 			)
 			require.NoError(t, err)
