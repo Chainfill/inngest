@@ -34,7 +34,7 @@ func (q *queueProcessor) claimShardLease(ctx context.Context) {
 	if len(shardGroup) == 0 {
 		return
 	}
-	shards := q.shardsByGroupName(shardGroup)
+	shards := q.shards.ByGroup(shardGroup)
 	if len(shards) == 0 {
 		l.Error("no shards found for group", "group", shardGroup)
 		q.quit <- ErrQueueShardNotFound
@@ -114,7 +114,7 @@ func (q *queueProcessor) tryClaimShardLease(ctx context.Context, shards []QueueS
 		if leaseID != nil {
 			q.shardLeaseLock.Lock()
 			q.shardLeaseID = leaseID
-			q.SetPrimaryShard(ctx, shard)
+			q.shards.SetPrimary(ctx, shard)
 			q.shardLeaseLock.Unlock()
 
 			metrics.GaugeActiveShardLease(ctx, 1, metrics.GaugeOpt{PkgName: pkgName, Tags: map[string]any{"shard_group": q.runMode.ShardGroup, "queue_shard": shard.Name(), "segment": q.ShardLeaseKeySuffix}})
@@ -139,9 +139,9 @@ func (q *queueProcessor) tryClaimShardLease(ctx context.Context, shards []QueueS
 func (q *queueProcessor) releaseShardLease() {
 	l := logger.StdlibLogger(context.Background())
 
-	defer metrics.GaugeActiveShardLease(context.Background(), 0, metrics.GaugeOpt{PkgName: pkgName, Tags: map[string]any{"shard_group": q.runMode.ShardGroup, "queue_shard": q.primaryQueueShard.Name(), "segment": q.ShardLeaseKeySuffix}})
+	defer metrics.GaugeActiveShardLease(context.Background(), 0, metrics.GaugeOpt{PkgName: pkgName, Tags: map[string]any{"shard_group": q.runMode.ShardGroup, "queue_shard": q.Shard().Name(), "segment": q.ShardLeaseKeySuffix}})
 
-	shard := q.primaryQueueShard
+	shard := q.Shard()
 	if shard == nil {
 		l.Warn("could not release shard lease, no primary shard set")
 		return
@@ -172,7 +172,7 @@ func (q *queueProcessor) renewShardLease(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			shardName := ""
-			if shard := q.primaryQueueShard; shard != nil {
+			if shard := q.Shard(); shard != nil {
 				shardName = shard.Name()
 			}
 			l.Debug("stopping shard lease renewal", "shard", shardName)
@@ -181,7 +181,7 @@ func (q *queueProcessor) renewShardLease(ctx context.Context) {
 
 			leaseID := q.shardLease()
 
-			shard := q.primaryQueueShard
+			shard := q.Shard()
 			if shard == nil {
 				q.log.ReportError(errors.New("missing primary shard during lease renewal"), fmt.Sprintf("stopping shard lease renewal, missing primary shard during lease renewal for shard group: %s", q.runMode.ShardGroup))
 				q.quit <- ErrShardLeaseNotFound

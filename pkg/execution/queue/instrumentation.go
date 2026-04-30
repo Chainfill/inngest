@@ -12,7 +12,7 @@ import (
 func (q *queueProcessor) runInstrumentation(ctx context.Context) {
 	ctx = redis_telemetry.WithScope(redis_telemetry.WithOpName(ctx, "Instrument"), redis_telemetry.ScopeQueue)
 
-	leaseID, err := q.primaryQueueShard.ConfigLease(ctx, "instrument", ConfigLeaseMax, q.instrumentationLease())
+	leaseID, err := q.Shard().ConfigLease(ctx, "instrument", ConfigLeaseMax, q.instrumentationLease())
 	if err != ErrConfigAlreadyLeased && err != nil {
 		q.quit <- err
 		return
@@ -24,7 +24,7 @@ func (q *queueProcessor) runInstrumentation(ctx context.Context) {
 
 		if lease != nil && q.instrumentationLeaseID == nil {
 			logger.StdlibLogger(ctx).Debug("claimed instrumentation lease")
-			metrics.IncrInstrumentationLeaseClaimsCounter(ctx, metrics.CounterOpt{PkgName: pkgName, Tags: map[string]any{"queue_shard": q.primaryQueueShard.Name()}})
+			metrics.IncrInstrumentationLeaseClaimsCounter(ctx, metrics.CounterOpt{PkgName: pkgName, Tags: map[string]any{"queue_shard": q.Shard().Name()}})
 		}
 		if lease == nil && q.instrumentationLeaseID != nil {
 			logger.StdlibLogger(ctx).Debug("lost instrumentation lease")
@@ -45,19 +45,19 @@ func (q *queueProcessor) runInstrumentation(ctx context.Context) {
 			return
 		case <-instr.Chan():
 			if q.isInstrumentator() {
-				if err := q.primaryQueueShard.Instrument(ctx); err != nil {
+				if err := q.Shard().Instrument(ctx); err != nil {
 					logger.StdlibLogger(ctx).Error("error running instrumentation", "error", err)
 				}
 			}
 		case <-tick.Chan():
-			metrics.GaugeWorkerQueueCapacity(ctx, int64(q.numWorkers), metrics.GaugeOpt{PkgName: pkgName, Tags: map[string]any{"queue_shard": q.primaryQueueShard.Name()}})
-			metrics.GaugePartitionProcessorCapacity(ctx, q.partitionCapacity(), metrics.GaugeOpt{PkgName: pkgName, Tags: map[string]any{"queue_shard": q.primaryQueueShard.Name()}})
-			metrics.GaugePartitionProcessorInFlight(ctx, q.partitionSem.Count(), metrics.GaugeOpt{PkgName: pkgName, Tags: map[string]any{"queue_shard": q.primaryQueueShard.Name()}})
+			metrics.GaugeWorkerQueueCapacity(ctx, int64(q.numWorkers), metrics.GaugeOpt{PkgName: pkgName, Tags: map[string]any{"queue_shard": q.Shard().Name()}})
+			metrics.GaugePartitionProcessorCapacity(ctx, q.partitionCapacity(), metrics.GaugeOpt{PkgName: pkgName, Tags: map[string]any{"queue_shard": q.Shard().Name()}})
+			metrics.GaugePartitionProcessorInFlight(ctx, q.partitionSem.Count(), metrics.GaugeOpt{PkgName: pkgName, Tags: map[string]any{"queue_shard": q.Shard().Name()}})
 
-			shardAssignmentConfig := q.primaryQueueShard.ShardAssignmentConfig()
-			metrics.GaugeShardLeaseCapacity(ctx, int64(shardAssignmentConfig.NumExecutors), metrics.GaugeOpt{PkgName: pkgName, Tags: map[string]any{"shard_group": shardAssignmentConfig.ShardGroup, "queue_shard": q.primaryQueueShard.Name(), "segment": q.ShardLeaseKeySuffix}})
+			shardAssignmentConfig := q.Shard().ShardAssignmentConfig()
+			metrics.GaugeShardLeaseCapacity(ctx, int64(shardAssignmentConfig.NumExecutors), metrics.GaugeOpt{PkgName: pkgName, Tags: map[string]any{"shard_group": shardAssignmentConfig.ShardGroup, "queue_shard": q.Shard().Name(), "segment": q.ShardLeaseKeySuffix}})
 
-			leaseID, err := q.primaryQueueShard.ConfigLease(ctx, "instrument", ConfigLeaseMax, q.instrumentationLease())
+			leaseID, err := q.Shard().ConfigLease(ctx, "instrument", ConfigLeaseMax, q.instrumentationLease())
 
 			if err != nil {
 				if err != ErrConfigAlreadyLeased {

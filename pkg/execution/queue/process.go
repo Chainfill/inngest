@@ -68,7 +68,7 @@ func (q *queueProcessor) ProcessItem(
 	//
 	// NOTE: It is important that we keep this here for every job;  the exeuctor uses this to pass
 	// along the job ID as metadata to the SDK.  We also need to pass in shard information.
-	jobCtx = WithShardID(jobCtx, q.primaryQueueShard.Name())
+	jobCtx = WithShardID(jobCtx, q.Shard().Name())
 	jobCtx = WithJobID(jobCtx, qi.ID)
 	// Same with the group ID, if it exists.
 	if qi.Data.GroupID != "" {
@@ -97,7 +97,7 @@ func (q *queueProcessor) ProcessItem(
 				}
 
 				// Once a job has started, use a BG context to always renew.
-				leaseID, err = q.primaryQueueShard.ExtendLease(
+				leaseID, err = q.Shard().ExtendLease(
 					context.Background(),
 					qi,
 					*leaseID,
@@ -318,20 +318,20 @@ func (q *queueProcessor) ProcessItem(
 			latencyAvg.Add(float64(latency))
 			metrics.GaugeQueueItemLatencyEWMA(ctx, int64(latencyAvg.Value()/1e6), metrics.GaugeOpt{
 				PkgName: pkgName,
-				Tags:    map[string]any{"kind": qi.Data.Kind, "queue_shard": q.primaryQueueShard.Name()},
+				Tags:    map[string]any{"kind": qi.Data.Kind, "queue_shard": q.Shard().Name()},
 			})
 			latencySem.Unlock()
 
 			// Set the metrics historgram and gauge, which reports the ewma value.
 			metrics.HistogramQueueItemLatency(ctx, latency.Milliseconds(), metrics.HistogramOpt{
 				PkgName: pkgName,
-				Tags:    map[string]any{"kind": qi.Data.Kind, "queue_shard": q.primaryQueueShard.Name()},
+				Tags:    map[string]any{"kind": qi.Data.Kind, "queue_shard": q.Shard().Name()},
 			})
 		}()
 
 		metrics.IncrQueueItemStatusCounter(ctx, metrics.CounterOpt{
 			PkgName: pkgName,
-			Tags:    map[string]any{"status": "started", "queue_shard": q.primaryQueueShard.Name()},
+			Tags:    map[string]any{"status": "started", "queue_shard": q.Shard().Name()},
 		})
 
 		// If a capacity lease was acquired for this item,
@@ -356,7 +356,7 @@ func (q *queueProcessor) ProcessItem(
 			Latency:             latency,
 			SojournDelay:        sojourn,
 			Priority:            q.PartitionPriorityFinder(ctx, p),
-			QueueShardName:      q.primaryQueueShard.Name(),
+			QueueShardName:      q.Shard().Name(),
 			ContinueCount:       continuationCtr,
 			RefilledFromBacklog: qi.RefilledFrom,
 			CapacityLease:       i.CapacityLease,
@@ -390,7 +390,7 @@ func (q *queueProcessor) ProcessItem(
 
 		metrics.IncrQueueItemStatusCounter(ctx, metrics.CounterOpt{
 			PkgName: pkgName,
-			Tags:    map[string]any{"status": status, "queue_shard": q.primaryQueueShard.Name()},
+			Tags:    map[string]any{"status": status, "queue_shard": q.Shard().Name()},
 		})
 
 		// NOTE:  We only want to clean up the jobDone channel here on success.
@@ -421,7 +421,7 @@ func (q *queueProcessor) ProcessItem(
 			}
 
 			qi.AtMS = at.UnixMilli()
-			if err := q.primaryQueueShard.Requeue(context.WithoutCancel(ctx), qi, at); err != nil {
+			if err := q.Shard().Requeue(context.WithoutCancel(ctx), qi, at); err != nil {
 				if err == ErrQueueItemNotFound {
 					// Safe. The executor may have dequeued.
 					return nil
@@ -439,7 +439,7 @@ func (q *queueProcessor) ProcessItem(
 
 		// Dequeue this entirely, as this permanently failed.
 		// XXX: Increase permanently failed counter here.
-		if err := q.primaryQueueShard.Dequeue(context.WithoutCancel(ctx), qi); err != nil {
+		if err := q.Shard().Dequeue(context.WithoutCancel(ctx), qi); err != nil {
 			if err == ErrQueueItemNotFound {
 				// Safe. The executor may have dequeued.
 				return nil
@@ -453,7 +453,7 @@ func (q *queueProcessor) ProcessItem(
 			return err
 		}
 	case <-jobCtx.Done():
-		if err := q.primaryQueueShard.Dequeue(context.WithoutCancel(ctx), qi); err != nil {
+		if err := q.Shard().Dequeue(context.WithoutCancel(ctx), qi); err != nil {
 			if err == ErrQueueItemNotFound {
 				// Safe. The executor may have dequeued.
 				return nil
