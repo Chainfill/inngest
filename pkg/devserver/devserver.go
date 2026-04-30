@@ -422,7 +422,7 @@ func start(ctx context.Context, opts StartOpts) error {
 
 	sn := singleton.New(ctx, map[string]*redis_state.QueueClient{
 		consts.DefaultQueueShardName: unshardedClient.Queue(),
-	}, shardSelector)
+	}, shardRegistry)
 
 	conditionalConnectTracer := itrace.NewConditionalTracer(itrace.ConnectTracer(), itrace.AlwaysTrace)
 

@@ -160,12 +160,10 @@ func TestGetSingletonInfoHandler(t *testing.T) {
 	unshardedClient := redis_state.NewUnshardedClient(rc, redis_state.StateDefaultKey, redis_state.QueueDefaultKey)
 	queueClient := unshardedClient.Queue()
 
-	shardSelector := func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-		return redis_state.NewQueueShard(consts.DefaultQueueShardName, queueClient), nil
-	}
+	shard := redis_state.NewQueueShard(consts.DefaultQueueShardName, queueClient)
 	singletonStore := singleton.New(ctx, map[string]*redis_state.QueueClient{
 		consts.DefaultQueueShardName: queueClient,
-	}, shardSelector)
+	}, queue.NewSingleShardRegistry(shard))
 
 	d := &debugAPI{singletonStore: singletonStore}
 
@@ -301,12 +299,10 @@ func TestGetSingletonInfoInvalidFunctionID(t *testing.T) {
 	unshardedClient := redis_state.NewUnshardedClient(rc, redis_state.StateDefaultKey, redis_state.QueueDefaultKey)
 	queueClient := unshardedClient.Queue()
 
-	shardSelector := func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-		return redis_state.NewQueueShard(consts.DefaultQueueShardName, queueClient), nil
-	}
+	shard := redis_state.NewQueueShard(consts.DefaultQueueShardName, queueClient)
 	singletonStore := singleton.New(context.Background(), map[string]*redis_state.QueueClient{
 		consts.DefaultQueueShardName: queueClient,
-	}, shardSelector)
+	}, queue.NewSingleShardRegistry(shard))
 
 	d := &debugAPI{
 		singletonStore: singletonStore,
@@ -460,12 +456,10 @@ func TestDeleteSingletonLockHandler(t *testing.T) {
 	unshardedClient := redis_state.NewUnshardedClient(rc, redis_state.StateDefaultKey, redis_state.QueueDefaultKey)
 	queueClient := unshardedClient.Queue()
 
-	shardSelector := func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-		return redis_state.NewQueueShard(consts.DefaultQueueShardName, queueClient), nil
-	}
+	shard := redis_state.NewQueueShard(consts.DefaultQueueShardName, queueClient)
 	singletonStore := singleton.New(ctx, map[string]*redis_state.QueueClient{
 		consts.DefaultQueueShardName: queueClient,
-	}, shardSelector)
+	}, queue.NewSingleShardRegistry(shard))
 
 	d := &debugAPI{singletonStore: singletonStore}
 
@@ -567,12 +561,10 @@ func TestDeleteSingletonLockInvalidFunctionID(t *testing.T) {
 	unshardedClient := redis_state.NewUnshardedClient(rc, redis_state.StateDefaultKey, redis_state.QueueDefaultKey)
 	queueClient := unshardedClient.Queue()
 
-	shardSelector := func(ctx context.Context, accountId uuid.UUID, queueName *string) (queue.QueueShard, error) {
-		return redis_state.NewQueueShard(consts.DefaultQueueShardName, queueClient), nil
-	}
+	shard := redis_state.NewQueueShard(consts.DefaultQueueShardName, queueClient)
 	singletonStore := singleton.New(context.Background(), map[string]*redis_state.QueueClient{
 		consts.DefaultQueueShardName: queueClient,
-	}, shardSelector)
+	}, queue.NewSingleShardRegistry(shard))
 
 	d := &debugAPI{
 		singletonStore: singletonStore,
