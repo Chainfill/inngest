@@ -3,6 +3,7 @@ package debugapi
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"testing"
 	"time"
 
@@ -534,6 +535,68 @@ func TestDeleteSingletonLockInvalidFunctionID(t *testing.T) {
 	})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "invalid function_id")
+}
+
+// emptyRegistry has no selector and no primary, so Resolve fails with
+// "no selector and no primary shard".
+func TestGetSingletonInfoNoShards(t *testing.T) {
+	d := &debugAPI{
+		shards: queue.NewShardRegistry(nil, nil),
+	}
+
+	_, err := d.GetSingletonInfo(context.Background(), &pb.SingletonInfoRequest{
+		FunctionId: uuid.New().String(),
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to resolve shard")
+	require.Contains(t, err.Error(), "no selector and no primary shard")
+}
+
+func TestDeleteSingletonLockNoShards(t *testing.T) {
+	d := &debugAPI{
+		shards: queue.NewShardRegistry(nil, nil),
+	}
+
+	_, err := d.DeleteSingletonLock(context.Background(), &pb.DeleteSingletonLockRequest{
+		FunctionId: uuid.New().String(),
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to resolve shard")
+	require.Contains(t, err.Error(), "no selector and no primary shard")
+}
+
+// A selector that returns an error simulates a registry that knows about
+// shards but cannot pick one for this account/queue.
+func TestGetSingletonInfoShardResolutionError(t *testing.T) {
+	selectorErr := errors.New("selector boom")
+	d := &debugAPI{
+		shards: queue.NewShardRegistry(nil, func(ctx context.Context, _ uuid.UUID, _ *string) (queue.QueueShard, error) {
+			return nil, selectorErr
+		}),
+	}
+
+	_, err := d.GetSingletonInfo(context.Background(), &pb.SingletonInfoRequest{
+		FunctionId: uuid.New().String(),
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to resolve shard")
+	require.ErrorIs(t, err, selectorErr)
+}
+
+func TestDeleteSingletonLockShardResolutionError(t *testing.T) {
+	selectorErr := errors.New("selector boom")
+	d := &debugAPI{
+		shards: queue.NewShardRegistry(nil, func(ctx context.Context, _ uuid.UUID, _ *string) (queue.QueueShard, error) {
+			return nil, selectorErr
+		}),
+	}
+
+	_, err := d.DeleteSingletonLock(context.Background(), &pb.DeleteSingletonLockRequest{
+		FunctionId: uuid.New().String(),
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to resolve shard")
+	require.ErrorIs(t, err, selectorErr)
 }
 
 // TestDeleteDebounceHandler tests the debug API handler for deleting debounces.
