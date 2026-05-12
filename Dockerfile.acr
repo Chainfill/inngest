@@ -8,6 +8,9 @@
 #   - Adds a Node stage to build dev-server-ui (Next.js → Vite) into the
 #     static assets that pkg/devserver/ui.go expects via //go:embed all:static.
 #     Mirrors what upstream's `make build-ui` produces in the goreleaser pipeline.
+#   - Wraps the binary in Datadog serverless-init for in-container log + metric
+#     forwarding to Datadog (Path A — no source-level tracer changes).
+#     The container app continues to supply command:[inngest] args:[start].
 #
 # Build with:
 #   az acr build --registry chainfillcrshared \
@@ -34,5 +37,7 @@ RUN GOFLAGS=-mod=vendor GOOS=linux GOARCH=amd64 go build -o /go/bin/inngest ./cm
 
 FROM alpine:3.16 AS inngest
 RUN apk add --no-cache ca-certificates tzdata && update-ca-certificates
+COPY --from=datadog/serverless-init:1 /datadog-init /app/datadog-init
 COPY --from=build /go/bin/inngest /bin/inngest
-CMD ["inngest"]
+ENTRYPOINT ["/app/datadog-init"]
+# CMD intentionally omitted: container app supplies command:[inngest] args:[start]
