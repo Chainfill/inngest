@@ -1,0 +1,38 @@
+# ACR Tasks-compatible Dockerfile for the chainfill fork.
+#
+# Differs from upstream Dockerfile by:
+#   - Drops BuildKit-only directives (--platform=$BUILDPLATFORM, --mount=type=cache)
+#     because ACR Tasks classic uses Moby builder, not BuildKit.
+#   - Hard-codes linux/amd64 (our target arch on Azure Container Apps).
+#   - Builds the whole ./cmd package instead of cmd/main.go (multi-file pkg).
+#   - Adds a Node stage to build dev-server-ui (Next.js → Vite) into the
+#     static assets that pkg/devserver/ui.go expects via //go:embed all:static.
+#     Mirrors what upstream's `make build-ui` produces in the goreleaser pipeline.
+#
+# Build with:
+#   az acr build --registry chainfillcrshared \
+#     --image inngest:vX.Y.Z-chainfill.N --platform linux/amd64 \
+#     --file Dockerfile.acr .
+
+FROM node:20-alpine AS ui-build
+RUN corepack enable && corepack prepare pnpm@10.18.2 --activate
+WORKDIR /app
+COPY ui ui
+# graphql-codegen schema source — referenced from ui/apps/dev-server-ui/codegen.ts
+COPY pkg/coreapi pkg/coreapi
+RUN cd ui && pnpm install --frozen-lockfile
+RUN cd ui/apps/dev-server-ui && pnpm build
+
+FROM golang:1.25.9-alpine AS build
+RUN apk add build-base
+WORKDIR /app
+COPY vendor vendor
+COPY . .
+# Drop the built UI dist into the static dir that pkg/devserver/ui.go embeds
+COPY --from=ui-build /app/ui/apps/dev-server-ui/dist/ pkg/devserver/static/
+RUN GOFLAGS=-mod=vendor GOOS=linux GOARCH=amd64 go build -o /go/bin/inngest ./cmd
+
+FROM alpine:3.16 AS inngest
+RUN apk add --no-cache ca-certificates tzdata && update-ca-certificates
+COPY --from=build /go/bin/inngest /bin/inngest
+CMD ["inngest"]

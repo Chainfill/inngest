@@ -1,0 +1,9 @@
+.git
+.github
+ui/apps/*/node_modules
+ui/apps/*/dist
+ui/apps/*/build
+ui/apps/*/.next
+**/node_modules
+**/.DS_Store
+*.test
