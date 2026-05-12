@@ -10,7 +10,8 @@
 #     Mirrors what upstream's `make build-ui` produces in the goreleaser pipeline.
 #   - Wraps the binary in Datadog serverless-init for in-container log + metric
 #     forwarding to Datadog (Path A — no source-level tracer changes).
-#     The container app continues to supply command:[inngest] args:[start].
+#     Final stage is debian:bookworm-slim (NOT alpine) because serverless-init
+#     is dynamically linked against glibc and won't exec on musl.
 #
 # Build with:
 #   az acr build --registry chainfillcrshared \
@@ -33,11 +34,20 @@ COPY vendor vendor
 COPY . .
 # Drop the built UI dist into the static dir that pkg/devserver/ui.go embeds
 COPY --from=ui-build /app/ui/apps/dev-server-ui/dist/ pkg/devserver/static/
-RUN GOFLAGS=-mod=vendor GOOS=linux GOARCH=amd64 go build -o /go/bin/inngest ./cmd
+# Static linkage so the binary runs on glibc-based final stage (matches upstream
+# release Dockerfile.goreleaser which also uses a non-alpine debian base).
+RUN GOFLAGS=-mod=vendor CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -ldflags="-s -w" -o /go/bin/inngest ./cmd
 
-FROM alpine:3.16 AS inngest
-RUN apk add --no-cache ca-certificates tzdata && update-ca-certificates
+# Final stage on Debian to be compatible with the glibc-based datadog-init binary
+FROM debian:bookworm-slim AS inngest
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates tzdata \
+ && rm -rf /var/lib/apt/lists/* \
+ && update-ca-certificates
 COPY --from=datadog/serverless-init:1 /datadog-init /app/datadog-init
 COPY --from=build /go/bin/inngest /bin/inngest
 ENTRYPOINT ["/app/datadog-init"]
-# CMD intentionally omitted: container app supplies command:[inngest] args:[start]
+# CMD intentionally omitted: container app supplies command:[/app/datadog-init]
+# args:[inngest, start]. ACA's command override REPLACES Docker ENTRYPOINT
+# (not concatenates), so the container app must invoke the wrapper explicitly.
